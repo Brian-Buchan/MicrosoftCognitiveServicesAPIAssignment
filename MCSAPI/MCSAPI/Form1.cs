@@ -10,6 +10,7 @@ using System.Windows.Forms;
 
 // 3rd party NuGet packages
 using CommandLine;
+using JsonFormatterPlus;
 
 namespace MCSAPI
 {
@@ -48,6 +49,12 @@ namespace MCSAPI
             {
                 Make_Intent_Request(textBox1.Text);
             }
+            HandleAddUtterances(textBox1.Text);
+        }
+
+        async static void HandleAddUtterances(string utterance)
+        {
+            await AddUtterances("utterances.json");
         }
 
         private async void Make_Intent_Request(string querey)
@@ -55,7 +62,7 @@ namespace MCSAPI
             //textBox1.Text = querey;
             var client = new HttpClient();
             var queryString = HttpUtility.ParseQueryString(string.Empty);
-            
+
             // The request header contains your subscription key
             client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", authoringKey);
 
@@ -71,11 +78,86 @@ namespace MCSAPI
             var endpointUri = "https://westus.api.cognitive.microsoft.com/luis/v2.0/apps/" + appID + "?" + queryString;
             var response = await client.GetAsync(endpointUri);
 
+            MessageBox.Show(endpointUri, "Querey");
             var strResponseContent = await response.Content.ReadAsStringAsync();
 
             // Display the JSON result from LUIS
             //Console.WriteLine(strResponseContent.ToString());
-            textBox1.Text = strResponseContent.ToString();
+            MessageBox.Show(strResponseContent, "Resposnse");
+        }
+
+        async static Task<HttpResponseMessage> SendGet(string uri)
+        {
+            using (var client = new HttpClient())
+            using (var request = new HttpRequestMessage())
+            {
+                request.Method = HttpMethod.Get;
+                request.RequestUri = new Uri(uri);
+                request.Headers.Add("Ocp-Apim-Subscription-Key", authoringKey);
+                return await client.SendAsync(request);
+            }
+        }
+
+        async static Task<HttpResponseMessage> SendPost(string uri, string requestBody)
+        {
+            using (var client = new HttpClient())
+            using (var request = new HttpRequestMessage())
+            {
+                request.Method = HttpMethod.Post;
+                request.RequestUri = new Uri(uri);
+
+                if (!String.IsNullOrEmpty(requestBody))
+                {
+                    request.Content = new StringContent(requestBody, Encoding.UTF8, "text/json");
+                }
+
+                request.Headers.Add("Ocp-Apim-Subscription-Key", authoringKey);
+                return await client.SendAsync(request);
+            }
+        }
+
+        async static Task AddUtterances(string input_file)
+        {
+            string uri = host + path + "examples";
+            string requestBody = File.ReadAllText(input_file);
+
+            var response = await SendPost(uri, requestBody);
+            var result = await response.Content.ReadAsStringAsync();
+            Console.WriteLine("Added utterances.");
+            Console.WriteLine(JsonFormatter.Format(result));
+
+            MessageBox.Show(result);
+        }
+
+        //async static Task AddUtterances(string utterance)
+        //{
+        //    string uri = host + path + "examples";
+
+        //    var response = await SendPost(uri, utterance);
+        //    var result = await response.Content.ReadAsStringAsync();
+
+        //    Console.WriteLine(JsonFormatter.Format(result));
+
+        //    MessageBox.Show(result);
+        //}
+
+        async static Task Train()
+        {
+            string uri = host + path + "train";
+
+            var response = await SendPost(uri, null);
+            var result = await response.Content.ReadAsStringAsync();
+            Console.WriteLine("Sent training request.");
+            Console.WriteLine(JsonFormatter.Format(result));
+
+        }
+
+        async static Task Status()
+        {
+            var response = await SendGet(host + path + "train");
+            var result = await response.Content.ReadAsStringAsync();
+            Console.WriteLine("Requested training status.");
+            Console.WriteLine(JsonFormatter.Format(result));
         }
 
         private void add_Control(Control control)
@@ -94,3 +176,42 @@ namespace MCSAPI
         }
     }
 }
+
+
+
+
+//[
+
+//  {
+
+//    "text": "go to Seattle today",
+
+//    "intentName": "BookFlight",
+
+//    "entityLabels": [
+
+//      {
+
+//        "entityName": "Location::LocationTo",
+
+//        "startCharIndex": 6,
+
+//        "endCharIndex": 12
+
+//      }
+
+//    ]
+
+//  },
+
+//  {
+
+//      "text": "a barking dog is annoying",
+
+//      "intentName": "None",
+
+//      "entityLabels": []
+
+//  }
+
+//]
