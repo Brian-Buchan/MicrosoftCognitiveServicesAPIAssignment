@@ -7,30 +7,14 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using System.Windows.Forms;
-
 // 3rd party NuGet packages
 using CommandLine;
 using JsonFormatterPlus;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace MCSAPI
-{
-    // parse command line options 
-    public class Options
-    {
-        [Option('v', "verbose", Required = false, HelpText = "Set output to verbose messages.")]
-        public bool Verbose { get; set; }
-
-        [Option('t', "train", Required = false, HelpText = "Train model.")]
-        public bool Train { get; set; }
-
-        [Option('s', "status", Required = false, HelpText = "Get training status.")]
-        public bool Status { get; set; }
-
-        [Option('a', "add", Required = false, HelpText = "Add example utterances to model.")]
-        public IEnumerable<string> Add { get; set; }
-    }
-
-    public partial class Form1 : Form
+{    public partial class Form1 : Form
     {
         static string appID = "cd59a1de-7d6e-4a3a-9b17-a4c6ffd36056";
         static string appVersion = "0.1";
@@ -49,17 +33,10 @@ namespace MCSAPI
             {
                 Make_Intent_Request(textBox1.Text);
             }
-            HandleAddUtterances(textBox1.Text);
-        }
-
-        async static void HandleAddUtterances(string utterance)
-        {
-            await AddUtterances("utterances.json");
         }
 
         private async void Make_Intent_Request(string querey)
         {
-            //textBox1.Text = querey;
             var client = new HttpClient();
             var queryString = HttpUtility.ParseQueryString(string.Empty);
 
@@ -78,14 +55,16 @@ namespace MCSAPI
             var endpointUri = "https://westus.api.cognitive.microsoft.com/luis/v2.0/apps/" + appID + "?" + queryString;
             var response = await client.GetAsync(endpointUri);
 
-            MessageBox.Show(endpointUri, "Querey");
+            //MessageBox.Show(endpointUri, "Querey");
             var strResponseContent = await response.Content.ReadAsStringAsync();
 
             // Display the JSON result from LUIS
             //Console.WriteLine(strResponseContent.ToString());
             MessageBox.Show(strResponseContent, "Resposnse");
+            HandleResponse(strResponseContent);
         }
 
+        #region LUIS Created
         async static Task<HttpResponseMessage> SendGet(string uri)
         {
             using (var client = new HttpClient())
@@ -97,7 +76,6 @@ namespace MCSAPI
                 return await client.SendAsync(request);
             }
         }
-
         async static Task<HttpResponseMessage> SendPost(string uri, string requestBody)
         {
             using (var client = new HttpClient())
@@ -115,7 +93,6 @@ namespace MCSAPI
                 return await client.SendAsync(request);
             }
         }
-
         async static Task AddUtterances(string input_file)
         {
             string uri = host + path + "examples";
@@ -125,22 +102,7 @@ namespace MCSAPI
             var result = await response.Content.ReadAsStringAsync();
             Console.WriteLine("Added utterances.");
             Console.WriteLine(JsonFormatter.Format(result));
-
-            MessageBox.Show(result);
         }
-
-        //async static Task AddUtterances(string utterance)
-        //{
-        //    string uri = host + path + "examples";
-
-        //    var response = await SendPost(uri, utterance);
-        //    var result = await response.Content.ReadAsStringAsync();
-
-        //    Console.WriteLine(JsonFormatter.Format(result));
-
-        //    MessageBox.Show(result);
-        //}
-
         async static Task Train()
         {
             string uri = host + path + "train";
@@ -149,15 +111,30 @@ namespace MCSAPI
             var result = await response.Content.ReadAsStringAsync();
             Console.WriteLine("Sent training request.");
             Console.WriteLine(JsonFormatter.Format(result));
-
         }
-
         async static Task Status()
         {
             var response = await SendGet(host + path + "train");
             var result = await response.Content.ReadAsStringAsync();
             Console.WriteLine("Requested training status.");
             Console.WriteLine(JsonFormatter.Format(result));
+        }
+
+        #endregion
+
+        private void HandleResponse(string response)
+        {
+            Data data = JsonConvert.DeserializeObject<Data>(response);
+            MessageBox.Show(data.topScoringIntent.ToString());
+            foreach (Entity entity in data.entities)
+            {
+                MessageBox.Show(entity.ToString());
+            }
+            //Intent intent = JsonConvert.DeserializeObject<Intent>(response);
+            //MessageBox.Show(intent.ToString());
+
+            //Entity entity = JsonConvert.DeserializeObject<Entity>(response);
+            //MessageBox.Show(entity.ToString());
         }
 
         private void add_Control(Control control)
@@ -175,43 +152,48 @@ namespace MCSAPI
             control.Focus();
         }
     }
+
+    // parse command line options 
+    public class Options
+    {
+        [Option('v', "verbose", Required = false, HelpText = "Set output to verbose messages.")]
+        public bool Verbose { get; set; }
+
+        [Option('t', "train", Required = false, HelpText = "Train model.")]
+        public bool Train { get; set; }
+
+        [Option('s', "status", Required = false, HelpText = "Get training status.")]
+        public bool Status { get; set; }
+
+        [Option('a', "add", Required = false, HelpText = "Add example utterances to model.")]
+        public IEnumerable<string> Add { get; set; }
+    }
+
+    // JSON extracted LUIS objects
+    public class Data
+    {
+        public Intent topScoringIntent;
+        public List<Entity> entities;
+    }
+    public class Intent
+    {
+        public string intent;
+        public double score;
+        public override string ToString()
+        {
+            return intent + ", " + score.ToString();
+        }
+    }
+    public class Entity
+    {
+        string entity;
+        string type;
+        int startIndex;
+        int endIndex;
+        double score;
+        public override string ToString()
+        {
+            return entity + ", " + type + ", " + score.ToString();
+        }
+    }
 }
-
-
-
-
-//[
-
-//  {
-
-//    "text": "go to Seattle today",
-
-//    "intentName": "BookFlight",
-
-//    "entityLabels": [
-
-//      {
-
-//        "entityName": "Location::LocationTo",
-
-//        "startCharIndex": 6,
-
-//        "endCharIndex": 12
-
-//      }
-
-//    ]
-
-//  },
-
-//  {
-
-//      "text": "a barking dog is annoying",
-
-//      "intentName": "None",
-
-//      "entityLabels": []
-
-//  }
-
-//]
