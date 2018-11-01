@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -134,7 +135,11 @@ namespace MCSAPI
             switch (data.TopScoringIntent.intent)
             {
                 case "UI.Entity.Add":
-
+                    Control control = ParseControl(data.entities);
+                    if (control != null)
+                        add_Control(control);
+                    else
+                        MessageBox.Show("No control was created. Could not parse Entity.", "Parse Failed");
                     break;
                 case "UI.Entity.Delete":
 
@@ -151,9 +156,31 @@ namespace MCSAPI
             }
         }
 
+        private Control ParseControl(Entity[] entities)
+        {
+            switch (entities[0].type)
+            {
+                case "Button":
+                    Button button = new Button();
+                    return button;
+                case "TextBox":
+                    TextBox textBox = new TextBox();
+                    return textBox;
+                case "Image":
+                    PictureBox pictureBox = new PictureBox();
+                    pictureBox.Size = new System.Drawing.Size(100, 85);
+                    pictureBox.Image = Image.FromFile("smiley.jpg");
+                    pictureBox.SizeMode = PictureBoxSizeMode.StretchImage;
+                    return pictureBox;
+                default:
+                    return null;
+            }
+        }
+
         private void add_Control(Control control)
         {
-            Controls.Add(control);
+            //Controls.Add(control);
+            DesignArea.Controls.Add(control);
         }
 
         private void delete_Contol(Control control)
