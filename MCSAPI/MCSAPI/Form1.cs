@@ -156,22 +156,36 @@ namespace MCSAPI
             }
         }
 
+        protected void buttonClick(object sender, EventArgs e)
+        {
+            MessageBox.Show("This button's name is " + ((Control)sender).Name);
+        }
+
         private Control ParseControl(Entity[] entities)
         {
             switch (entities[0].type)
             {
                 case "Button":
                     Button button = new Button();
+                    button.Text = button.Name;
+                    button.ForeColor = Color.Black;
+                    button.Click += new EventHandler(buttonClick);
                     return button;
                 case "TextBox":
                     TextBox textBox = new TextBox();
+                    textBox.Text = textBox.Name;
                     return textBox;
                 case "Image":
                     PictureBox pictureBox = new PictureBox();
                     pictureBox.Size = new System.Drawing.Size(100, 85);
                     pictureBox.Image = Image.FromFile("smiley.jpg");
                     pictureBox.SizeMode = PictureBoxSizeMode.StretchImage;
+
                     return pictureBox;
+                case "Label":
+                    Label label = new Label();
+                    label.Text = label.Name;
+                    return label;
                 default:
                     return null;
             }
@@ -179,13 +193,12 @@ namespace MCSAPI
 
         private void add_Control(Control control)
         {
-            //Controls.Add(control);
             DesignArea.Controls.Add(control);
         }
 
         private void delete_Contol(Control control)
         {
-            Controls.Remove(control);
+            DesignArea.Controls.Remove(control);
         }
 
         private void focus_Control(Control control)
