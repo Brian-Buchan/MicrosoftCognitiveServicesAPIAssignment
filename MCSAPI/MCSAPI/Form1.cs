@@ -14,7 +14,8 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace MCSAPI
-{    public partial class Form1 : Form
+{
+    public partial class Form1 : Form
     {
         static string appID = "cd59a1de-7d6e-4a3a-9b17-a4c6ffd36056";
         static string appVersion = "0.1";
@@ -60,7 +61,7 @@ namespace MCSAPI
 
             // Display the JSON result from LUIS
             //Console.WriteLine(strResponseContent.ToString());
-            MessageBox.Show(strResponseContent, "Resposnse");
+            //MessageBox.Show(strResponseContent, "Resposnse");
             HandleResponse(strResponseContent);
         }
 
@@ -125,16 +126,29 @@ namespace MCSAPI
         private void HandleResponse(string response)
         {
             Data data = JsonConvert.DeserializeObject<Data>(response);
-            MessageBox.Show(data.topScoringIntent.ToString());
-            foreach (Entity entity in data.entities)
+            //MessageBox.Show(data.TopScoringIntent.ToString());
+            //foreach (Entity entity in data.entities)
+            //{
+            //    MessageBox.Show(entity.ToString());
+            //}
+            switch (data.TopScoringIntent.intent)
             {
-                MessageBox.Show(entity.ToString());
-            }
-            //Intent intent = JsonConvert.DeserializeObject<Intent>(response);
-            //MessageBox.Show(intent.ToString());
+                case "UI.Entity.Add":
 
-            //Entity entity = JsonConvert.DeserializeObject<Entity>(response);
-            //MessageBox.Show(entity.ToString());
+                    break;
+                case "UI.Entity.Delete":
+
+                    break;
+                case "UI.Entity.Select":
+
+                    break;
+                case "None":
+                    MessageBox.Show("Your querey of '" + data.Query + "' returned a response of None.", "Input not recognized");
+                    break;
+                default:
+
+                    break;
+            }
         }
 
         private void add_Control(Control control)
@@ -153,27 +167,28 @@ namespace MCSAPI
         }
     }
 
-    // parse command line options 
-    public class Options
-    {
-        [Option('v', "verbose", Required = false, HelpText = "Set output to verbose messages.")]
-        public bool Verbose { get; set; }
+    //// parse command line options 
+    //public class Options
+    //{
+    //    [Option('v', "verbose", Required = false, HelpText = "Set output to verbose messages.")]
+    //    public bool Verbose { get; set; }
 
-        [Option('t', "train", Required = false, HelpText = "Train model.")]
-        public bool Train { get; set; }
+    //    [Option('t', "train", Required = false, HelpText = "Train model.")]
+    //    public bool Train { get; set; }
 
-        [Option('s', "status", Required = false, HelpText = "Get training status.")]
-        public bool Status { get; set; }
+    //    [Option('s', "status", Required = false, HelpText = "Get training status.")]
+    //    public bool Status { get; set; }
 
-        [Option('a', "add", Required = false, HelpText = "Add example utterances to model.")]
-        public IEnumerable<string> Add { get; set; }
-    }
+    //    [Option('a', "add", Required = false, HelpText = "Add example utterances to model.")]
+    //    public IEnumerable<string> Add { get; set; }
+    //}
 
     // JSON extracted LUIS objects
     public class Data
     {
-        public Intent topScoringIntent;
-        public List<Entity> entities;
+        public string Query;
+        public Intent TopScoringIntent;
+        public Entity[] entities;
     }
     public class Intent
     {
@@ -186,14 +201,15 @@ namespace MCSAPI
     }
     public class Entity
     {
-        string entity;
-        string type;
-        int startIndex;
-        int endIndex;
-        double score;
+        public string entity;
+        public string type;
+        public int startIndex;
+        public int endIndex;
+        public double score;
         public override string ToString()
         {
             return entity + ", " + type + ", " + score.ToString();
+            //return type + ", " + score.ToString();
         }
     }
 }
