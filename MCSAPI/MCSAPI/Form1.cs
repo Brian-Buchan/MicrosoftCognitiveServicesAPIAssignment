@@ -18,23 +18,24 @@ namespace MCSAPI
 {
     public partial class Form1 : Form
     {
+        #region LUIS Strings
         static string appID = "cd59a1de-7d6e-4a3a-9b17-a4c6ffd36056";
         static string appVersion = "0.1";
         static string authoringKey = "533fe2634b0f42f68c996c0af991c9f8";
         static string host = "https://westus.api.cognitive.microsoft.com";
         static string path = "/luis/api/v2.0/apps/" + appID + "/versions/" + appVersion + "/";
+        #endregion
 
         public Form1()
         {
             InitializeComponent();
         }
 
+        // DoQuerey Button = pressing [Enter] will execute this method
         private void button1_Click(object sender, EventArgs e)
         {
             if (textBox1.Text != "")
-            {
                 Make_Intent_Request(textBox1.Text);
-            }
         }
 
         private async void Make_Intent_Request(string querey)
@@ -66,7 +67,28 @@ namespace MCSAPI
             HandleResponse(strResponseContent);
         }
 
+        // LUIS Created methods used to programatically create and update a LUIS application from code
+        // NOT USED IN THE CURRENT BUILD
+        // TODO: Update to incorporate so that the application can differentiate between buttons
+        //       and update them so that "the blue button" can be deleted instead of an arbitrary button
+
         #region LUIS Created
+        // parse command line options 
+        public class Options
+        {
+            [Option('v', "verbose", Required = false, HelpText = "Set output to verbose messages.")]
+            public bool Verbose { get; set; }
+
+            [Option('t', "train", Required = false, HelpText = "Train model.")]
+            public bool Train { get; set; }
+
+            [Option('s', "status", Required = false, HelpText = "Get training status.")]
+            public bool Status { get; set; }
+
+            [Option('a', "add", Required = false, HelpText = "Add example utterances to model.")]
+            public IEnumerable<string> Add { get; set; }
+        }
+
         async static Task<HttpResponseMessage> SendGet(string uri)
         {
             using (var client = new HttpClient())
@@ -122,47 +144,61 @@ namespace MCSAPI
             Console.WriteLine(JsonFormatter.Format(result));
         }
 
-        #endregion
+        #endregion // NOT USED IN CURRENT BUILD
 
+        // Chooses the operation to fufill based on the LUIS message that is returned
         private void HandleResponse(string response)
         {
+            // Parse the JSON response from the LUIS applicaiton
             Data data = JsonConvert.DeserializeObject<Data>(response);
+
+            #region DebugCode
             //MessageBox.Show(data.TopScoringIntent.ToString());
             //foreach (Entity entity in data.entities)
             //{
             //    MessageBox.Show(entity.ToString());
             //}
+            #endregion
+
+            Control control = ParseControl(data.entities);
+
             switch (data.TopScoringIntent.intent)
             {
                 case "UI.Entity.Add":
-                    Control control = ParseControl(data.entities);
                     if (control != null)
                         add_Control(control);
                     else
-                        MessageBox.Show("No control was created. Could not parse Entity.", "Parse Failed");
+                        MessageBox.Show("No control was created. Could not parse Entity.", "Parse Failed.");
                     break;
                 case "UI.Entity.Delete":
-
+                    if (control != null)
+                        delete_Contol(control);
+                    else
+                        MessageBox.Show("No control was deleted. Could not parse Entity.", "Parse Failed.");
                     break;
                 case "UI.Entity.Select":
-
+                    focus_Control(control);
                     break;
                 case "None":
-                    MessageBox.Show("Your querey of '" + data.Query + "' returned a response of None.", "Input not recognized");
+                    MessageBox.Show("Your querey of '" + data.Query + "' returned a response of None.", "Input not recognized.");
                     break;
                 default:
-
+                    MessageBox.Show("The LUIS application returned an unexpected response.", "Error!");
                     break;
             }
         }
 
+        // Arbitrary button click method that all created buttons can use for a placeholder
         protected void buttonClick(object sender, EventArgs e)
         {
             MessageBox.Show("This button's name is " + ((Control)sender).Name);
         }
 
+        // Parse the JSON objects and create From.Controls that the application can interact with
         private Control ParseControl(Entity[] entities)
         {
+            // TODO: Once LUIS is Updated/Trained/Published when a new object is created in the application
+            //       the returned object will contain more information instead of placeholder information
             switch (entities[0].type)
             {
                 case "Button":
@@ -180,7 +216,6 @@ namespace MCSAPI
                     pictureBox.Size = new System.Drawing.Size(100, 85);
                     pictureBox.Image = Image.FromFile("smiley.jpg");
                     pictureBox.SizeMode = PictureBoxSizeMode.StretchImage;
-
                     return pictureBox;
                 case "Label":
                     Label label = new Label();
@@ -196,9 +231,18 @@ namespace MCSAPI
             DesignArea.Controls.Add(control);
         }
 
+        // Because all controls have the same name in the current build
+        // this method iterates over the collection, will find a match on the first item, delete it
+        // causign the list to shrink, and then move to the next item, this causes half of selected object
+        // type to get deleted from the form. Once LUIS is Updated/Trained/Published when a control is created
+        // this method will need to be refactored to select the correct item from the DesignArea
         private void delete_Contol(Control control)
         {
-            DesignArea.Controls.Remove(control);
+            foreach (Control _control in DesignArea.Controls)
+            {
+                if (control.Name == _control.Name)
+                    DesignArea.Controls.Remove(_control);
+            }
         }
 
         private void focus_Control(Control control)
@@ -207,22 +251,6 @@ namespace MCSAPI
         }
     }
 
-    //// parse command line options 
-    //public class Options
-    //{
-    //    [Option('v', "verbose", Required = false, HelpText = "Set output to verbose messages.")]
-    //    public bool Verbose { get; set; }
-
-    //    [Option('t', "train", Required = false, HelpText = "Train model.")]
-    //    public bool Train { get; set; }
-
-    //    [Option('s', "status", Required = false, HelpText = "Get training status.")]
-    //    public bool Status { get; set; }
-
-    //    [Option('a', "add", Required = false, HelpText = "Add example utterances to model.")]
-    //    public IEnumerable<string> Add { get; set; }
-    //}
-
     // JSON extracted LUIS objects
     public class Data
     {
@@ -230,6 +258,7 @@ namespace MCSAPI
         public Intent TopScoringIntent;
         public Entity[] entities;
     }
+    // LUIS object in JSON form that handles LUIS Intents
     public class Intent
     {
         public string intent;
@@ -239,6 +268,7 @@ namespace MCSAPI
             return intent + ", " + score.ToString();
         }
     }
+    // LUIS object in JSON form that handles LUIS Entities
     public class Entity
     {
         public string entity;
@@ -249,7 +279,6 @@ namespace MCSAPI
         public override string ToString()
         {
             return entity + ", " + type + ", " + score.ToString();
-            //return type + ", " + score.ToString();
         }
     }
 }
